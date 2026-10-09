@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#070E1B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RG Admin">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>RG Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<style>
+:root{--bg:#070E1B;--card:#0F1B30;--card2:#15243D;--line:#1F3050;--ink:#E8ECF3;--mute:#8C9AB3;--gold:#D4AF37;--gold2:#F5D77A;--ok:#10B981;--bad:#EF4444;--warn:#F59E0B}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif}
+body{overscroll-behavior-y:none}
+.serif{font-family:Fraunces,Georgia,serif}
+button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer}
+/* ---------- Bloqueo con PIN ---------- */
+#lock{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:env(safe-area-inset-top) 24px env(safe-area-inset-bottom);background:radial-gradient(500px 400px at 50% 20%,rgba(212,175,55,.18),transparent 60%),var(--bg);transition:opacity .45s,transform .5s cubic-bezier(.2,.8,.2,1)}
+#lock.fuera{opacity:0;transform:scale(1.08);pointer-events:none}
+#lock svg{width:84px;color:var(--gold);filter:drop-shadow(0 0 14px rgba(212,175,55,.5))}
+#lock svg ellipse,#lock svg path{stroke-dasharray:200;stroke-dashoffset:200;animation:trazo 1.3s cubic-bezier(.65,0,.35,1) forwards}
+@keyframes trazo{to{stroke-dashoffset:0}}
+#lock h1{font-size:1.5rem;letter-spacing:5px}
+#lockMsg{color:var(--mute);font-size:.9rem;min-height:1.2em}
+#dots{display:flex;gap:16px}#dots i{width:14px;height:14px;border-radius:50%;border:2px solid var(--gold);transition:background .15s,transform .15s}
+#dots i.on{background:var(--gold);transform:scale(1.1)}#dots.mal{animation:sacude .4s}#dots.mal i{border-color:var(--bad)}
+@keyframes sacude{20%,60%{transform:translateX(-10px)}40%,80%{transform:translateX(10px)}}
+.pad{display:grid;grid-template-columns:repeat(3,76px);gap:16px;margin-top:8px}
+.pad button{height:76px;border-radius:50%;background:rgba(255,255,255,.06);font-size:1.7rem;font-weight:500;transition:background .15s,transform .1s}
+.pad button:active{background:rgba(212,175,55,.3);transform:scale(.94)}.pad .vacio{visibility:hidden}
+/* ---------- App ---------- */
+#app{min-height:100%;padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+header{position:sticky;top:0;z-index:10;padding:calc(env(safe-area-inset-top) + 12px) 18px 12px;background:rgba(7,14,27,.86);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+.top small{color:var(--gold);font-size:.68rem;font-weight:700;letter-spacing:2.5px;text-transform:uppercase}
+.top h1{font-size:1.85rem;line-height:1.1;margin-top:2px}
+.top .acc{display:flex;gap:8px}.top .acc button{width:38px;height:38px;border-radius:50%;background:var(--card2);font-size:1rem}
+#q{width:100%;margin-top:12px;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:500 1rem Inter,sans-serif;outline:0}
+#q:focus{border-color:var(--gold)}
+.seg{display:flex;gap:6px;margin-top:10px;overflow-x:auto;scrollbar-width:none}.seg::-webkit-scrollbar{display:none}
+.seg button{flex:0 0 auto;padding:8px 14px;border-radius:20px;background:var(--card);border:1px solid var(--line);font-size:.8rem;font-weight:600;color:var(--mute)}
+.seg button.on{background:var(--gold);color:#0A192F;border-color:var(--gold)}
+main{padding:16px 16px 0;animation:entra .35s ease}
+@keyframes entra{from{opacity:0;transform:translateY(8px)}}
+.hero{border-radius:22px;padding:22px;background:radial-gradient(300px 160px at 90% 0,rgba(212,175,55,.3),transparent 70%),linear-gradient(140deg,#13284A,#0A192F);border:1px solid rgba(212,175,55,.3);margin-bottom:14px}
+.hero small{font-size:.68rem;font-weight:700;letter-spacing:2.5px;color:var(--gold);text-transform:uppercase}
+.hero b{display:block;font-family:Fraunces,serif;font-size:2.6rem;margin:6px 0 2px;background:linear-gradient(180deg,#fff,var(--gold2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero span{color:var(--mute);font-size:.82rem}
+.metodos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px}
+.metodos div{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
+.metodos small{display:block;font-size:.66rem;color:var(--mute);font-weight:600}.metodos b{font-size:.98rem}
+h2.sec{font-size:.72rem;letter-spacing:2px;text-transform:uppercase;color:var(--mute);margin:6px 4px 10px;font-weight:700}
+.lista{display:flex;flex-direction:column;gap:8px}
+.item{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;text-align:left;width:100%;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;animation:entra .35s ease both;animation-delay:calc(var(--i,0)*25ms)}
+.item:active{background:var(--card2)}
+.item .t{font-weight:600;font-size:.98rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .s{grid-column:1;color:var(--mute);font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .m{grid-row:1/3;grid-column:2;text-align:right;font-weight:700}
+.item .m small{display:block;font-weight:600;font-size:.7rem;color:var(--mute)}
+.item.dup{border-color:rgba(245,158,11,.6);background:linear-gradient(90deg,rgba(245,158,11,.12),var(--card) 60%)}
+.tag{display:inline-block;font-size:.62rem;font-weight:800;letter-spacing:.8px;padding:3px 7px;border-radius:6px;margin-right:6px;vertical-align:1px}
+.tag.pend{background:rgba(245,158,11,.18);color:var(--warn)}.tag.ok{background:rgba(16,185,129,.18);color:var(--ok)}.tag.dup{background:var(--warn);color:#0A192F}.tag.gold{background:rgba(212,175,55,.2);color:var(--gold2)}
+.vacio{text-align:center;color:var(--mute);padding:40px 20px}.vacio b{display:block;font-family:Fraunces,serif;font-size:1.3rem;color:var(--ink);margin-bottom:6px}
+.mas{width:100%;padding:14px;margin:6px 0 10px;border-radius:14px;border:1px dashed var(--line);color:var(--mute);font-weight:600}
+.skel{height:64px;border-radius:16px;background:linear-gradient(90deg,var(--card) 25%,var(--card2) 50%,var(--card) 75%);background-size:200% 100%;animation:sh 1.2s infinite;margin-bottom:8px}@keyframes sh{to{background-position:-200% 0}}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;display:grid;grid-template-columns:repeat(4,1fr);padding:8px 8px calc(8px + env(safe-area-inset-bottom));background:rgba(10,18,33,.9);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--line)}
+nav.tabs button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;font-size:1.3rem;color:var(--mute);border-radius:12px;transition:color .2s}
+nav.tabs button span{font-size:.64rem;font-weight:700;letter-spacing:.3px}
+nav.tabs button.on{color:var(--gold)}nav.tabs button.on span{color:var(--gold)}
+/* ---------- Hoja inferior ---------- */
+#sheetBg{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.55);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .3s}
+#sheet{position:fixed;left:0;right:0;bottom:0;z-index:31;max-height:88vh;overflow-y:auto;background:var(--card);border-radius:24px 24px 0 0;border-top:1px solid rgba(212,175,55,.35);padding:10px 20px calc(24px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .38s cubic-bezier(.2,.9,.3,1)}
+body.sheet-on #sheetBg{opacity:1;pointer-events:auto}body.sheet-on #sheet{transform:none}
+.grab{width:40px;height:5px;border-radius:5px;background:var(--line);margin:0 auto 16px}
+#sheet h3{font-family:Fraunces,serif;font-size:1.5rem;margin-bottom:4px}
+#sheet .muted{color:var(--mute);font-size:.88rem;line-height:1.5;margin-bottom:14px}
+.datos{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 16px}
+.datos div{background:var(--card2);border-radius:12px;padding:10px 12px}.datos small{display:block;font-size:.66rem;color:var(--mute);font-weight:700;letter-spacing:.6px;text-transform:uppercase}.datos b{font-size:.98rem}
+.datos .ancho{grid-column:1/-1}.datos .ancho b{font-weight:500;font-size:.88rem;line-height:1.5}
+.btn{display:block;width:100%;padding:15px;border-radius:14px;background:var(--card2);font-weight:700;font-size:.95rem;margin-top:8px}
+.btn.rojo{background:var(--bad);color:#fff}.btn.oro{background:var(--gold);color:#0A192F}.btn.verde{background:var(--ok);color:#06281C}
+.chk{display:flex;gap:10px;align-items:flex-start;background:var(--card2);border-radius:12px;padding:12px;font-size:.86rem;line-height:1.4;margin:6px 0}
+.chk input{width:20px;height:20px;accent-color:var(--gold);flex-shrink:0;margin-top:1px}
+.stepper{display:flex;align-items:center;justify-content:center;gap:18px;margin:10px 0}
+.stepper button{width:54px;height:54px;border-radius:50%;background:var(--card2);font-size:1.6rem}.stepper b{font-family:Fraunces,serif;font-size:2.4rem;min-width:80px;text-align:center}
+#toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 10px);z-index:60;transform:translate(-50%,-140%);background:var(--card2);border:1px solid var(--gold);padding:12px 18px;border-radius:14px;font-size:.88rem;font-weight:600;max-width:92vw;transition:transform .35s cubic-bezier(.2,.9,.3,1.2)}
+#toast.on{transform:translate(-50%,0)}#toast.err{border-color:var(--bad)}
+</style>
+</head>
+<body>
+<div id="lock">
+  <svg viewBox="0 0 120 70" fill="none" stroke="currentColor"><ellipse cx="40" cy="35" rx="25" ry="20" stroke-width="2.6"/><ellipse cx="80" cy="35" rx="25" ry="20" stroke-width="2.6"/><path d="M 55 32 Q 60 26 65 32 M 22 25 L 12 25 M 98 25 L 108 25" stroke-width="2.6" stroke-linecap="round"/></svg>
+  <h1 class="serif">RG ADMIN</h1>
+  <div id="lockMsg"></div>
+  <div id="dots"></div>
+  <div class="pad" id="pad"></div>
+</div>
+
+<div id="app" hidden>
+  <header>
+    <div class="top"><div><small>RG Ópticas · Admin</small><h1 class="serif" id="hTitulo">Caja de hoy</h1></div>
+      <div class="acc"><button id="btnRef" title="Actualizar">↻</button><button id="btnLock" title="Bloquear">🔒</button></div></div>
+    <input id="q" type="search" placeholder="Buscar…" autocomplete="off" hidden>
+    <div class="seg" id="seg" hidden></div>
+  </header>
+  <main id="vista"></main>
+  <nav class="tabs" id="tabs">
+    <button data-t="caja" class="on">💰<span>Caja</span></button>
+    <button data-t="trabajos">👓<span>Trabajos</span></button>
+    <button data-t="expedientes">📂<span>Expedientes</span></button>
+    <button data-t="inventario">📦<span>Inventario</span></button>
+  </nav>
+</div>
+<div id="sheetBg"></div><div id="sheet"></div><div id="toast"></div>
+
+<script>
+// ================= CONFIGURACIÓN =================
+firebase.initializeApp({apiKey:"AIzaSyBgtC6qexBlnS_mQTVkZ19ueKgZIOrgRnk",authDomain:"optica-rg--2.firebaseapp.com",projectId:"optica-rg--2",storageBucket:"optica-rg--2.firebasestorage.app",messagingSenderId:"786320956490",appId:"1:786320956490:web:19b7a390ead756327b1ab3"});
+const db=firebase.firestore(); db.enablePersistence({synchronizeTabs:true}).catch(()=>{});
+
+// ================= UTILIDADES =================
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm=t=>String(t??'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const strip=h=>String(h??'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
+const r2=n=>Math.round((Number(n)+Number.EPSILON)*100)/100;
+const money=n=>'$'+(Number(n)||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+const vibra=(p=12)=>navigator.vibrate&&navigator.vibrate(p);
+const S={tab:'caja',ventas:[],trabajos:null,inv:null,exps:null,expBusq:null,seg:{trabajos:'pend',inventario:'todos'},q:'',limite:60};
+function toast(m,err){const t=$('toast');t.textContent=m;t.className='on'+(err?' err':'');clearTimeout(t._h);t._h=setTimeout(()=>t.className=err?'err':'',3000)}
+function abrirSheet(html){$('sheet').innerHTML='<div class="grab"></div>'+html;$('sheet').scrollTop=0;document.body.classList.add('sheet-on')}
+function cerrarSheet(){document.body.classList.remove('sheet-on')}
+$('sheetBg').onclick=cerrarSheet;
+function confirmar(titulo,detalle,txt){return new Promise(res=>{abrirSheet(`<h3>${titulo}</h3><p class="muted">${detalle}</p><button class="btn rojo" id="cfOk">${txt}</button><button class="btn" id="cfNo">Cancelar</button>`);$('cfOk').onclick=()=>{cerrarSheet();res(true)};$('cfNo').onclick=()=>{cerrarSheet();res(false)}})}
+function auditar(accion,detalle){db.collection('auditoria').add({accion,detalle:JSON.parse(JSON.stringify(detalle)),fecha:new Date().toISOString(),origen:'app-admin'}).catch(()=>{})}
+
+// ================= PIN =================
+async function hash(t){const txt='rg-admin:'+t;if(window.crypto&&crypto.subtle){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(txt));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}let h=0;for(const c of txt)h=(h*31+c.charCodeAt(0))|0;return'h'+h}
+let pinBuf='',pinPaso=localStorage.getItem('rg_admin_pin')?'entrar':'crear',pinPrimero='';
+const MSG={entrar:'Ingresa tu PIN',crear:'Crea un PIN de 4 dígitos',confirmar:'Escríbelo otra vez para confirmar'};
+function pintarLock(m){$('lockMsg').textContent=m||MSG[pinPaso];$('dots').innerHTML=[0,1,2,3].map(i=>`<i class="${i<pinBuf.length?'on':''}"></i>`).join('')}
+$('pad').innerHTML=['1','2','3','4','5','6','7','8','9','','0','⌫'].map(k=>`<button class="${k?'':'vacio'}" data-k="${k}">${k}</button>`).join('');
+$('pad').onclick=e=>{const b=e.target.closest('button');if(b&&b.dataset.k)tecla(b.dataset.k)};
+async function tecla(k){vibra(8);if(k==='⌫'){pinBuf=pinBuf.slice(0,-1);return pintarLock()}if(pinBuf.length>=4)return;pinBuf+=k;pintarLock();if(pinBuf.length<4)return;
+  const h=await hash(pinBuf);
+  if(pinPaso==='crear'){pinPrimero=h;pinPaso='confirmar';pinBuf='';return setTimeout(()=>pintarLock(),180)}
+  if(pinPaso==='confirmar'){if(h===pinPrimero){localStorage.setItem('rg_admin_pin',h);pinPaso='entrar';desbloquear()}else{pinPaso='crear';errorPin('No coinciden. Crea tu PIN de nuevo')}return}
+  if(h===localStorage.getItem('rg_admin_pin'))desbloquear();else errorPin('PIN incorrecto')}
+function errorPin(m){$('dots').classList.add('mal');vibra([60,40,60]);setTimeout(()=>{$('dots').classList.remove('mal');pinBuf='';pintarLock(m)},450)}
+function desbloquear(){pinBuf='';$('lock').classList.add('fuera');$('app').hidden=false;if(!S.listo){S.listo=true;iniciar()}}
+function bloquear(){pinPaso='entrar';pinBuf='';pintarLock();cerrarSheet();$('lock').classList.remove('fuera')}
+let ocultoDesde=0;document.addEventListener('visibilitychange',()=>{if(document.hidden)ocultoDesde=Date.now();else if(ocultoDesde&&Date.now()-ocultoDesde>5*60000)bloquear()});
+$('btnLock').onclick=bloquear;pintarLock();
+
+// ================= DATOS =================
+function iniciar(){
+  db.collection('config').doc('ventasDiarias').onSnapshot(d=>{S.ventas=(d.exists&&d.data().lista)||[];if(S.tab==='caja')pintar()},e=>toast('Sin conexión: '+e.message,1));
+  cargarTrabajos();cargarInv();cargarExps();irTab('caja');
+}
+async function cargarTrabajos(){try{const sn=await db.collection('trabajos').get();S.trabajos=sn.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.creado||0)-(a.creado||0));marcarDuplicados()}catch(e){toast('Trabajos: '+e.message,1);S.trabajos=[]}if(S.tab==='trabajos')pintar()}
+async function cargarInv(){try{const sn=await db.collection('inventario').get();S.inv=sn.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>String(a.marca||a.desc).localeCompare(String(b.marca||b.desc)))}catch(e){S.inv=[]}if(S.tab==='inventario')pintar()}
+async function cargarExps(){try{let sn;try{sn=await db.collection('expedientes').orderBy('fecha','desc').limit(40).get()}catch(e){sn=await db.collection('expedientes').limit(40).get()}S.exps=sn.docs.map(d=>({id:d.id,...d.data()}))}catch(e){S.exps=[]}if(S.tab==='expedientes')pintar()}
+function marcarDuplicados(){const g={};S.trabajos.forEach(t=>{const k=norm(t.cliente)+'|'+Number(t.total||0)+'|'+norm(strip(t.armazon)).slice(0,50);(g[k]=g[k]||[]).push(t)});S.dups=new Map();Object.values(g).forEach(a=>{if(a.length>1)a.forEach(t=>S.dups.set(t.id,a.filter(x=>x!==t).map(x=>x.folio).join(', ')))})}
+let tBusq=null;
+async function buscarExpServidor(q){const vars=[...new Set([q,q.replace(/\b\w/g,c=>c.toUpperCase()),q.toUpperCase()])],res=new Map();
+  await Promise.all(vars.map(v=>db.collection('expedientes').where('paciente','>=',v).where('paciente','<=',v+'\uf8ff').limit(25).get().then(sn=>sn.docs.forEach(d=>res.set(d.id,{id:d.id,...d.data()}))).catch(()=>{})));
+  S.expBusq=[...res.values()];if(S.tab==='expedientes')pintar()}
+
+// ================= NAVEGACIÓN =================
+const TIT={caja:'Caja de hoy',trabajos:'Trabajos',expedientes:'Expedientes',inventario:'Inventario'};
+const SEGS={trabajos:[['pend','Pendientes'],['todos','Todos'],['dup','Duplicados']],inventario:[['todos','Todos'],['bajo','Stock bajo']]};
+function irTab(t){S.tab=t;S.q='';S.limite=60;S.expBusq=null;$('q').value='';vibra(6);
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  $('hTitulo').textContent=TIT[t];$('q').hidden=t==='caja';$('q').placeholder=t==='expedientes'?'Buscar paciente…':'Buscar nombre, folio o nota…';
+  const sg=SEGS[t];$('seg').hidden=!sg;if(sg)$('seg').innerHTML=sg.map(([k,n])=>`<button data-s="${k}" class="${S.seg[t]===k?'on':''}">${n}</button>`).join('');
+  pintar();window.scrollTo({top:0})}
+$('tabs').onclick=e=>{const b=e.target.closest('button');if(b)irTab(b.dataset.t)};
+$('seg').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.seg[S.tab]=b.dataset.s;S.limite=60;document.querySelectorAll('#seg button').forEach(x=>x.classList.toggle('on',x===b));pintar()};
+$('q').oninput=()=>{S.q=norm($('q').value.trim());S.limite=60;if(S.tab==='expedientes'){clearTimeout(tBusq);const v=$('q').value.trim();if(v.length>=2)tBusq=setTimeout(()=>buscarExpServidor(v),400);else{S.expBusq=null}}pintar()};
+$('btnRef').onclick=()=>{vibra();toast('Actualizando…');S.trabajos=S.inv=S.exps=null;pintar();cargarTrabajos();cargarInv();cargarExps()};
+
+// ================= VISTAS =================
+const skel='<div class="skel"></div>'.repeat(5);
+function lista(items,fila){if(!items.length)return'<div class="vacio"><b>Sin resultados</b>Prueba con otra búsqueda.</div>';
+  return`<div class="lista">${items.slice(0,S.limite).map(fila).join('')}</div>${items.length>S.limite?`<button class="mas" onclick="S.limite+=60;pintar()">Mostrar más (${items.length-S.limite})</button>`:''}`}
+function pintar(){const v=$('vista');v.style.animation='none';void v.offsetWidth;v.style.animation='';v.innerHTML=({caja:vCaja,trabajos:vTrabajos,expedientes:vExps,inventario:vInv})[S.tab]()}
+function vCaja(){const total=S.ventas.reduce((s,x)=>s+(Number(x.monto)||0),0),m=k=>S.ventas.filter(x=>(x.metodo||'Efectivo')===k).reduce((s,x)=>s+(Number(x.monto)||0),0);
+  const items=S.ventas.map((x,i)=>({...x,_i:i})).reverse();
+  return`<div class="hero"><small>Total de la jornada</small><b>${money(total)}</b><span>${S.ventas.length} movimientos · toca uno para corregirlo</span></div>
+  <div class="metodos"><div><small>💵 Efectivo</small><b>${money(m('Efectivo'))}</b></div><div><small>💳 Tarjeta</small><b>${money(m('Tarjeta'))}</b></div><div><small>🏦 Transf.</small><b>${money(m('Transferencia'))}</b></div></div>
+  <h2 class="sec">Movimientos</h2>${items.length?lista(items,(x,i)=>`<button class="item" style="--i:${i}" onclick="hojaMov(${x._i})"><span class="t">${esc(x.paciente||'Mostrador')}</span><span class="m">${money(x.monto)}<small>${esc(x.metodo||'Efectivo')}</small></span><span class="s">${esc(x.hora||'')} · ${esc(strip(x.concepto))}</span></button>`):'<div class="vacio"><b>Caja sin movimientos</b>Las ventas aparecen aquí en tiempo real.</div>'}`}
+function vTrabajos(){if(!S.trabajos)return skel;let a=S.trabajos;const sg=S.seg.trabajos;
+  if(sg==='pend')a=a.filter(t=>t.estado==='PENDIENTE');if(sg==='dup')a=a.filter(t=>S.dups.has(t.id));
+  if(S.q)a=a.filter(t=>norm(t.cliente+' '+t.folio+' '+t.folioNota).includes(S.q));
+  const nd=S.dups.size?`<h2 class="sec">${a.length} trabajos${S.dups.size?` · <span style="color:var(--warn)">${S.dups.size} posibles duplicados</span>`:''}</h2>`:`<h2 class="sec">${a.length} trabajos</h2>`;
+  return nd+lista(a,(t,i)=>`<button class="item ${S.dups.has(t.id)?'dup':''}" style="--i:${i}" onclick="hojaTrabajo('${t.id}')"><span class="t">${S.dups.has(t.id)?'<span class="tag dup">DOBLE</span>':''}${esc(t.cliente)}</span><span class="m">${money(t.total)}<small>${t.saldo>0?'Debe '+money(t.saldo):'Pagado'}</small></span><span class="s"><span class="tag ${t.estado==='PENDIENTE'?'pend':'ok'}">${esc(t.estado||'')}</span>${esc(t.folio||'')} · ${esc(t.fechaRegistro||'')}</span></button>`)}
+function vExps(){const base=S.expBusq||S.exps;if(!base)return skel;let a=base;if(S.q)a=a.filter(e=>norm(e.paciente+' '+e.folio).includes(S.q));
+  return`<h2 class="sec">${S.expBusq?'Resultados':'Más recientes'}</h2>`+lista(a,(e,i)=>`<button class="item" style="--i:${i}" onclick="hojaExp('${e.id}')"><span class="t">${esc(e.paciente)}</span><span class="m">${e.imagen&&!e.detalle?'📎':'📋'}</span><span class="s">${esc(e.folio||'Sin folio')} · ${esc(e.fecha||'')}</span></button>`)}
+function vInv(){if(!S.inv)return skel;let a=S.inv;if(S.seg.inventario==='bajo')a=a.filter(i=>i.stock!=null&&Number(i.stock)<=Number(i.minimo??3));
+  if(S.q)a=a.filter(i=>norm(i.marca+' '+i.modelo+' '+i.desc+' '+i.cat).includes(S.q));
+  return`<h2 class="sec">${a.length} productos</h2>`+lista(a,(i,k)=>`<button class="item" style="--i:${k}" onclick="hojaInv('${i.id}')"><span class="t">${esc(i.marca||i.desc)} ${esc(i.modelo||'')}</span><span class="m" style="color:${Number(i.stock)<=Number(i.minimo??3)?'var(--warn)':'var(--ink)'}">${i.stock??'—'}<small>piezas</small></span><span class="s">${esc(i.cat||'')} · ${money(i.price)}</span></button>`)}
+
+// ================= HOJAS DE DETALLE Y ACCIONES =================
+function hojaMov(i){const v=S.ventas[i];if(!v)return;const esPago=/abono|liquida/i.test(v.concepto||''),t=esPago&&S.trabajos&&S.trabajos.find(x=>x.folio===v.folioNota);
+  abrirSheet(`<h3>${money(v.monto)}</h3><p class="muted">${esc(v.paciente||'Mostrador')} · ${esc(v.hora||'')}</p>
+  <div class="datos"><div><small>Método</small><b>${esc(v.metodo||'Efectivo')}</b></div><div><small>Nota</small><b>${esc(v.folioNota||'—')}</b></div><div class="ancho"><small>Concepto</small><b>${esc(strip(v.concepto))}</b></div></div>
+  ${t?`<label class="chk"><input type="checkbox" id="chkRev" checked><span>Regresar ${money(v.monto)} al saldo del trabajo <b>${esc(t.folio)}</b> (${esc(t.cliente)}).</span></label>`:''}
+  <button class="btn rojo" id="bDel">Eliminar este pago</button><button class="btn" onclick="cerrarSheet()">Cerrar</button>`);
+  $('bDel').onclick=async()=>{const rev=t&&$('chkRev').checked;if(!await confirmar('¿Eliminar pago?',`Se quitará ${money(v.monto)} de ${esc(v.paciente||'Mostrador')} del corte de caja.${rev?' El saldo del trabajo volverá a subir.':''}`,'Sí, eliminar'))return;borrarMovimiento(v,rev?t:null)}}
+async function borrarMovimiento(v,trabajo){const ref=db.collection('config').doc('ventasDiarias'),obj=JSON.stringify(v);
+  try{await db.runTransaction(async tx=>{const d=await tx.get(ref),l=((d.exists&&d.data().lista)||[]).slice();const k=l.findIndex(x=>(v.uid&&x.uid===v.uid)||JSON.stringify(x)===obj);if(k<0)throw new Error('Ese pago ya no existe');l.splice(k,1);tx.update(ref,{lista:l})});
+    if(trabajo){const saldo=r2((trabajo.saldo||0)+Number(v.monto)),anticipo=r2(Math.max(0,(trabajo.anticipo||0)-Number(v.monto)));await db.collection('trabajos').doc(trabajo.id).update({saldo,anticipo,estado:'PENDIENTE'});Object.assign(trabajo,{saldo,anticipo,estado:'PENDIENTE'})}
+    auditar('ELIMINAR_PAGO',v);vibra([20,30,20]);toast('Pago eliminado ✓')}catch(e){toast('No se pudo: '+e.message,1)}}
+function hojaTrabajo(id){const t=S.trabajos.find(x=>x.id===id);if(!t)return;const dup=S.dups.get(id);
+  abrirSheet(`<h3>${esc(t.cliente)}</h3><p class="muted">${esc(t.folio||'')}${t.folioNota?' · Nota '+esc(t.folioNota):''} · ${esc(t.fechaRegistro||'')}</p>
+  ${dup?`<label class="chk" style="border:1px solid var(--warn)"><span>⚠️ <b>Posible duplicado</b> de: ${esc(dup)}. Revisa cuál es el correcto antes de borrar.</span></label>`:''}
+  <div class="datos"><div><small>Total</small><b>${money(t.total)}</b></div><div><small>Anticipo</small><b style="color:var(--ok)">${money(t.anticipo)}</b></div><div><small>Saldo</small><b style="color:${t.saldo>0?'var(--bad)':'var(--ok)'}">${money(t.saldo)}</b></div><div><small>Estado</small><b>${esc(t.estado||'')}</b></div>
+  <div class="ancho"><small>Concepto</small><b>${esc(strip(t.armazon))}</b></div></div>
+  ${t.estado==='PENDIENTE'?'<button class="btn verde" id="bEnt">Marcar como entregado</button>':''}
+  <button class="btn rojo" id="bDel">Eliminar trabajo</button><button class="btn" onclick="cerrarSheet()">Cerrar</button>`);
+  if($('bEnt'))$('bEnt').onclick=async()=>{if(t.saldo>0&&!await confirmar('Tiene saldo pendiente',`${esc(t.cliente)} todavía debe ${money(t.saldo)}. ¿Marcarlo como entregado de todos modos?`,'Sí, entregar'))return;
+    try{const f=new Date().toLocaleString();await db.collection('trabajos').doc(id).update({estado:'ENTREGADO',fechaEntrega:f});Object.assign(t,{estado:'ENTREGADO',fechaEntrega:f});auditar('ENTREGAR_TRABAJO',{folio:t.folio,cliente:t.cliente});cerrarSheet();pintar();toast('Marcado como entregado ✓')}catch(e){toast(e.message,1)}};
+  $('bDel').onclick=async()=>{if(!await confirmar('¿Eliminar trabajo?',`Se borrará el trabajo ${esc(t.folio)} de ${esc(t.cliente)} (${money(t.total)}). Esta acción no se puede deshacer. Los pagos del corte no se borran.`,'Sí, eliminar'))return;
+    try{await db.collection('trabajos').doc(id).delete();auditar('ELIMINAR_TRABAJO',t);S.trabajos=S.trabajos.filter(x=>x.id!==id);marcarDuplicados();pintar();vibra([20,30,20]);toast('Trabajo eliminado ✓')}catch(e){toast(e.message,1)}}}
+function hojaExp(id){const e=(S.expBusq||[]).concat(S.exps||[]).find(x=>x.id===id);if(!e)return;const d=e.detalle||{};
+  abrirSheet(`<h3>${esc(e.paciente)}</h3><p class="muted">${esc(e.folio||'Sin folio')} · ${esc(e.fecha||'')}</p>
+  <div class="datos">${d.diagnostico?`<div class="ancho"><small>Diagnóstico</small><b>${esc(d.diagnostico)}</b></div>`:''}${d.edad?`<div><small>Edad</small><b>${esc(d.edad)}</b></div>`:''}${d.telefono?`<div><small>Teléfono</small><b>${esc(d.telefono)}</b></div>`:''}
+  <div class="ancho"><small>Notas</small><b>${esc(strip(e.notas))||'—'}</b></div></div>
+  ${e.imagen?'<button class="btn oro" id="bVer">Ver archivo adjunto</button>':''}
+  <button class="btn rojo" id="bDel">Eliminar expediente</button><button class="btn" onclick="cerrarSheet()">Cerrar</button>`);
+  if($('bVer'))$('bVer').onclick=()=>{const w=window.open();if(w){w.document.title=e.paciente;w.document.body.style.margin='0';w.document.body.innerHTML=/^data:image/.test(e.imagen)?`<img src="${e.imagen}" style="width:100%">`:`<iframe src="${e.imagen}" style="border:0;width:100vw;height:100vh"></iframe>`}};
+  $('bDel').onclick=async()=>{if(!await confirmar('¿Eliminar expediente?',`Se borrará el expediente de ${esc(e.paciente)}. Esta acción no se puede deshacer.`,'Sí, eliminar'))return;
+    try{await db.collection('expedientes').doc(id).delete();auditar('ELIMINAR_EXPEDIENTE',{folio:e.folio,paciente:e.paciente,fecha:e.fecha});S.exps=(S.exps||[]).filter(x=>x.id!==id);if(S.expBusq)S.expBusq=S.expBusq.filter(x=>x.id!==id);pintar();toast('Expediente eliminado ✓')}catch(er){toast(er.message,1)}}}
+function hojaInv(id){const it=S.inv.find(x=>x.id===id);if(!it)return;let st=Number(it.stock)||0;
+  abrirSheet(`<h3>${esc(it.marca||it.desc)} ${esc(it.modelo||'')}</h3><p class="muted">${esc(it.cat||'')} · ${money(it.price)}</p>
+  <h2 class="sec" style="text-align:center">Stock</h2><div class="stepper"><button id="sMen">−</button><b id="sVal">${st}</b><button id="sMas">+</button></div>
+  <button class="btn oro" id="bSave">Guardar stock</button><button class="btn rojo" id="bDel">Eliminar producto</button><button class="btn" onclick="cerrarSheet()">Cerrar</button>`);
+  const pint=()=>{$('sVal').textContent=st};$('sMen').onclick=()=>{st=Math.max(0,st-1);vibra(6);pint()};$('sMas').onclick=()=>{st++;vibra(6);pint()};
+  $('bSave').onclick=async()=>{try{await db.collection('inventario').doc(id).update({stock:st});auditar('AJUSTAR_STOCK',{id,producto:(it.marca||it.desc)+' '+(it.modelo||''),de:it.stock,a:st});it.stock=st;cerrarSheet();pintar();toast('Stock actualizado ✓')}catch(e){toast(e.message,1)}};
+  $('bDel').onclick=async()=>{if(!await confirmar('¿Eliminar producto?',`Se borrará ${esc(it.marca||it.desc)} ${esc(it.modelo||'')} del inventario.`,'Sí, eliminar'))return;
+    try{await db.collection('inventario').doc(id).delete();auditar('ELIMINAR_PRODUCTO',it);S.inv=S.inv.filter(x=>x.id!==id);pintar();toast('Producto eliminado ✓')}catch(e){toast(e.message,1)}}}
+
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
