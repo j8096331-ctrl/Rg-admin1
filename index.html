@@ -13,6 +13,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <style>
 :root{--bg:#070E1B;--card:#0F1B30;--card2:#15243D;--line:#1F3050;--ink:#E8ECF3;--mute:#8C9AB3;--gold:#D4AF37;--gold2:#F5D77A;--ok:#10B981;--bad:#EF4444;--warn:#F59E0B}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -89,6 +90,7 @@ body.sheet-on #sheetBg{opacity:1;pointer-events:auto}body.sheet-on #sheet{transf
 .chk input{width:20px;height:20px;accent-color:var(--gold);flex-shrink:0;margin-top:1px}
 .stepper{display:flex;align-items:center;justify-content:center;gap:18px;margin:10px 0}
 .stepper button{width:54px;height:54px;border-radius:50%;background:var(--card2);font-size:1.6rem}.stepper b{font-family:Fraunces,serif;font-size:2.4rem;min-width:80px;text-align:center}
+.campo{width:100%;padding:14px;margin-bottom:10px;border-radius:12px;border:1px solid var(--line);background:var(--card2);color:var(--ink);font:500 1rem Inter,sans-serif;outline:0}.campo:focus{border-color:var(--gold)}
 #toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 10px);z-index:60;transform:translate(-50%,-140%);background:var(--card2);border:1px solid var(--gold);padding:12px 18px;border-radius:14px;font-size:.88rem;font-weight:600;max-width:92vw;transition:transform .35s cubic-bezier(.2,.9,.3,1.2)}
 #toast.on{transform:translate(-50%,0)}#toast.err{border-color:var(--bad)}
 </style>
@@ -121,7 +123,7 @@ body.sheet-on #sheetBg{opacity:1;pointer-events:auto}body.sheet-on #sheet{transf
 
 <script>
 // ================= CONFIGURACIÓN =================
-firebase.initializeApp({apiKey:"AIzaSyBgtC6qexBlnS_mQTVkZ19ueKgZIOrgRnk",authDomain:"optica-rg--2.firebaseapp.com",projectId:"optica-rg--2",storageBucket:"optica-rg--2.firebasestorage.app",messagingSenderId:"786320956490",appId:"1:786320956490:web:19b7a390ead756327b1ab3"});
+firebase.initializeApp({apiKey:"AIzaSyBgTC6qeXBlnS_mQTVkZ19ueKgZIOrgRnk",authDomain:"optica-rg--2.firebaseapp.com",projectId:"optica-rg--2",storageBucket:"optica-rg--2.firebasestorage.app",messagingSenderId:"786320956490",appId:"1:786320956490:web:77c39f0585c31de77b1ab3"});
 const db=firebase.firestore(); db.enablePersistence({synchronizeTabs:true}).catch(()=>{});
 
 // ================= UTILIDADES =================
@@ -136,7 +138,7 @@ const S={tab:'caja',ventas:[],trabajos:null,inv:null,exps:null,expBusq:null,seg:
 function toast(m,err){const t=$('toast');t.textContent=m;t.className='on'+(err?' err':'');clearTimeout(t._h);t._h=setTimeout(()=>t.className=err?'err':'',3000)}
 function abrirSheet(html){$('sheet').innerHTML='<div class="grab"></div>'+html;$('sheet').scrollTop=0;document.body.classList.add('sheet-on')}
 function cerrarSheet(){document.body.classList.remove('sheet-on')}
-$('sheetBg').onclick=cerrarSheet;
+$('sheetBg').onclick=()=>{if(!S.login)cerrarSheet()};
 function confirmar(titulo,detalle,txt){return new Promise(res=>{abrirSheet(`<h3>${titulo}</h3><p class="muted">${detalle}</p><button class="btn rojo" id="cfOk">${txt}</button><button class="btn" id="cfNo">Cancelar</button>`);$('cfOk').onclick=()=>{cerrarSheet();res(true)};$('cfNo').onclick=()=>{cerrarSheet();res(false)}})}
 function auditar(accion,detalle){db.collection('auditoria').add({accion,detalle:JSON.parse(JSON.stringify(detalle)),fecha:new Date().toISOString(),origen:'app-admin'}).catch(()=>{})}
 
@@ -153,7 +155,12 @@ async function tecla(k){vibra(8);if(k==='⌫'){pinBuf=pinBuf.slice(0,-1);return 
   if(pinPaso==='confirmar'){if(h===pinPrimero){localStorage.setItem('rg_admin_pin',h);pinPaso='entrar';desbloquear()}else{pinPaso='crear';errorPin('No coinciden. Crea tu PIN de nuevo')}return}
   if(h===localStorage.getItem('rg_admin_pin'))desbloquear();else errorPin('PIN incorrecto')}
 function errorPin(m){$('dots').classList.add('mal');vibra([60,40,60]);setTimeout(()=>{$('dots').classList.remove('mal');pinBuf='';pintarLock(m)},450)}
-function desbloquear(){pinBuf='';$('lock').classList.add('fuera');$('app').hidden=false;if(!S.listo){S.listo=true;iniciar()}}
+function desbloquear(){pinBuf='';$('lock').classList.add('fuera');$('app').hidden=false;if(!S.listo){S.listo=true;asegurarSesion(iniciar)}}
+function asegurarSesion(fn){let hecho=false;firebase.auth().onAuthStateChanged(u=>{if(u){S.login=false;cerrarSheet();if(!hecho){hecho=true;fn()}}else hojaLogin()})}
+function hojaLogin(){S.login=true;abrirSheet(`<h3>Inicia sesión</h3><p class="muted">Con tu cuenta de administrador. Solo se pide la primera vez en este teléfono.</p>
+  <input id="lgMail" class="campo" type="email" placeholder="Correo" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false"><input id="lgPass" class="campo" type="password" placeholder="Contraseña" autocomplete="current-password">
+  <button class="btn oro" id="lgBtn">Entrar</button><p id="lgErr" class="muted" style="color:var(--bad);margin-top:10px"></p>`);
+  $('lgBtn').onclick=()=>{$('lgBtn').textContent='Entrando…';firebase.auth().signInWithEmailAndPassword($('lgMail').value.trim().toLowerCase(),$('lgPass').value).catch(e=>{$('lgErr').textContent=(c=>({'auth/invalid-credential':'Correo o contraseña incorrectos.','auth/wrong-password':'Contraseña incorrecta.','auth/user-not-found':'Ese correo no está registrado en Firebase.','auth/invalid-email':'El correo no tiene un formato válido.','auth/too-many-requests':'Demasiados intentos. Espera unos minutos.','auth/network-request-failed':'Sin conexión a internet.','auth/operation-not-allowed':'El acceso con correo no está activado en Firebase.','auth/user-disabled':'Esta cuenta está desactivada.'}[c]||('Error: '+c)))(e.code)}).finally(()=>{const b=$('lgBtn');if(b)b.textContent='Entrar'})}}
 function bloquear(){pinPaso='entrar';pinBuf='';pintarLock();cerrarSheet();$('lock').classList.remove('fuera')}
 let ocultoDesde=0;document.addEventListener('visibilitychange',()=>{if(document.hidden)ocultoDesde=Date.now();else if(ocultoDesde&&Date.now()-ocultoDesde>5*60000)bloquear()});
 $('btnLock').onclick=bloquear;pintarLock();
